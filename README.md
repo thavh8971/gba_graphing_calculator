@@ -1,5 +1,6 @@
 # GBA Graphing Calculator
 
+<img width="482" height="373" alt="image" src="https://github.com/user-attachments/assets/a19e7a4f-ba8c-4ca7-b5fa-d8b2280312a9" />
 
 <img width="475" height="366" alt="image" src="https://github.com/user-attachments/assets/a88061b8-4b49-4922-b858-6b5dec00b4a3" />
 
