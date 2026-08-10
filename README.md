@@ -1,5 +1,15 @@
 # GBA Graphing Calculator
 
+
+<img width="476" height="374" alt="image" src="https://github.com/user-attachments/assets/c424f61c-3c42-4b79-b6dc-3f1e75a4f4ef" />
+
+<img width="475" height="366" alt="image" src="https://github.com/user-attachments/assets/a88061b8-4b49-4922-b858-6b5dec00b4a3" />
+
+<img width="476" height="370" alt="image" src="https://github.com/user-attachments/assets/df4e6769-0bc8-4454-84f1-c9b95d835e5e" />
+
+<img width="473" height="367" alt="image" src="https://github.com/user-attachments/assets/b0b6cd2a-ed8a-49b1-98d1-396fc9ccdbe6" />
+
+
 Một graphing-calculator prototype viết lại theo kiến trúc module cho Game Boy Advance. ROM đích chạy ở 240×160, Mode 3, vẽ RGB15 trực tiếp vào framebuffer VRAM. Parser, evaluator, các mode và graph sampler đều build được trên host mà không cần libgba; chỉ lớp platform chạm vào phần cứng GBA.
 
 Đây là bản thử nghiệm chức năng, không phải firmware Casio và không tuyên bố clone đầy đủ bất kỳ model nào. Dự án cũng không tuyên bố có 453 function/command.
