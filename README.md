@@ -271,7 +271,8 @@ The current host test suites cover:
 * integer ratio output is limited by the signed 64-bit range;
 * operation forms still serialize into finite command strings; `MatA..MatD` / `VctA..VctD` exist, but there are no persistent named lists or spreadsheet functionality;
 * no spreadsheet, eActivity, program editor, conics, dynamic graphing, CAS, or full Graph Solve functionality;
-* some functions with extreme conditions like tan(), csc() will get this calculator fuck up.
+* some functions with extreme conditions like tan(), csc() will get this calculator being fucked up.
+* and I am not a american, authentic gameboy advance is very rare, you might not expect this to 100% run on your GBA
 ## Reference documentation
 
 * [Casio Natural textbook input](https://support.casio.com/global/en/calc/manual/fx-97SGCW_en/inputting_expressions_and_values/inputting_an_expression_using_natural_textbook_format.html)
