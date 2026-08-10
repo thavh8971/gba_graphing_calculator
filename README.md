@@ -10,57 +10,57 @@
 <img width="473" height="367" alt="image" src="https://github.com/user-attachments/assets/b0b6cd2a-ed8a-49b1-98d1-396fc9ccdbe6" />
 
 
-Một graphing-calculator prototype viết lại theo kiến trúc module cho Game Boy Advance. ROM đích chạy ở 240×160, Mode 3, vẽ RGB15 trực tiếp vào framebuffer VRAM. Parser, evaluator, các mode và graph sampler đều build được trên host mà không cần libgba; chỉ lớp platform chạm vào phần cứng GBA.
+A graphing-calculator prototype rewritten with a modular architecture for the Game Boy Advance. The target ROM runs at 240×160 in Mode 3, drawing RGB15 pixels directly into the VRAM framebuffer. The parser, evaluator, modes, and graph sampler can all be built on the host without libgba; only the platform layer touches GBA hardware.
 
-Đây là bản thử nghiệm chức năng, không phải firmware Casio và không tuyên bố clone đầy đủ bất kỳ model nào. Dự án cũng không tuyên bố có 453 function/command.
+This is a functional prototype, not Casio firmware, and it does not claim to be a complete clone of any particular model. The project also does not claim to implement 453 functions/commands.
 
-## Có gì trong repository
+## What is in the repository
 
 ```text
 include/gcalc/            public C API
 source/core/              parser-independent number/evaluator/decimal core
-source/modes/             dispatcher và implementation từng mode
-source/graph/             typed graph row, streaming sampler, world clip
+source/modes/             dispatcher and per-mode implementations
+source/graph/             typed graph rows, streaming sampler, world clipping
 source/ui/                framebuffer primitives, font, Natural cursor
-source/app/               state machine và renderer dùng chung
+source/app/               shared state machine and renderer
 source/platform/          GBA entry point + libgba key/VBlank bridge
 tests/                    host test executables
 scripts/build.ps1         Windows build/verify entry point
-docs/                     contract, architecture và toolchain snapshot
+docs/                     contracts, architecture, and toolchain snapshot
 ```
 
-Chi tiết thiết kế nằm ở [docs/architecture.md](docs/architecture.md). Cú pháp đầy đủ và ranh giới so với tài liệu Casio nằm ở [docs/reference_matrix.md](docs/reference_matrix.md).
+Detailed design information is available in [docs/architecture.md](https://github.com/thavh8971/gba_graphing_calculator/blob/main/docs/architecture.md). The full syntax and the boundary between this project and Casio documentation are described in [docs/reference_matrix.md](https://github.com/thavh8971/gba_graphing_calculator/blob/main/docs/reference_matrix.md).
 
-## Yêu cầu build
+## Build requirements
 
-Trên Windows:
+On Windows:
 
-- PowerShell 5.1 hoặc mới hơn;
-- GNU Make và shell/utilities kiểu MSYS2;
-- host GCC để chạy host tests;
-- devkitARM, libgba và `gbafix` từ devkitPro để build ROM.
+* PowerShell 5.1 or newer;
+* GNU Make and an MSYS2-style shell/utilities environment;
+* host GCC for running host tests;
+* devkitARM, libgba, and `gbafix` from devkitPro to build the ROM.
 
-`scripts/build.ps1` tự dò `C:\devkitPro` và `C:\msys64\opt\devkitpro`; có thể override bằng tham số. Snapshot package tham chiếu được ghi ở [docs/toolchain.lock.md](docs/toolchain.lock.md). Toolchain binary không được vendor trong repository.
+`scripts/build.ps1` automatically searches `C:\devkitPro` and `C:\msys64\opt\devkitpro`; these paths can be overridden with parameters. The reference package snapshot is recorded in [docs/toolchain.lock.md](https://github.com/thavh8971/gba_graphing_calculator/blob/main/docs/toolchain.lock.md). Toolchain binaries are not vendored in the repository.
 
-## Build và verify
+## Build and verify
 
-Chạy từ PowerShell tại root dự án:
+Run these commands from the project root in PowerShell:
 
 ```powershell
-# Build và chạy mọi host test
+# Build and run all host tests
 .\scripts\build.ps1 host-test
 
-# Build ROM
+# Build the ROM
 .\scripts\build.ps1 gba
 
-# Rebuild host tests + ROM, rồi kiểm tra cartridge header thực
+# Rebuild host tests + ROM, then verify the actual cartridge header
 .\scripts\build.ps1 verify -Rebuild
 
-# In metadata, kích thước và SHA-256 của ROM vừa build
+# Print metadata, size, and SHA-256 of the newly built ROM
 .\scripts\build.ps1 rom-info
 ```
 
-Nếu toolchain ở vị trí khác:
+If the toolchain is installed somewhere else:
 
 ```powershell
 .\scripts\build.ps1 verify -Rebuild `
@@ -68,103 +68,103 @@ Nếu toolchain ở vị trí khác:
   -Make C:\msys64\usr\bin\make.exe
 ```
 
-Artifacts được sinh dưới:
+Artifacts are generated under:
 
 ```text
-gba_graphing_calculator.gba                 ROM phát hành để mở/chạy
+gba_graphing_calculator.gba                 release ROM to open/run
 build/gba/gba_graphing_calculator.gba
 build/gba/gba_graphing_calculator.elf
 build/gba/gba_graphing_calculator.map
 build/host/*_test.exe
 ```
 
-ROM ở project root luôn được copy byte-for-byte từ `build/gba` trong target `gba`, `verify` và `rom-info`; đây là đường dẫn canonical để tránh mở nhầm một ROM cũ.
+The ROM in the project root is always copied byte-for-byte from `build/gba` by the `gba`, `verify`, and `rom-info` targets; this is the canonical path to avoid accidentally opening an outdated ROM.
 
-README này cố ý không chép size, checksum hoặc chữ “PASS” từ project cũ. Giá trị bàn giao phải lấy từ `verify`/`rom-info` trên chính checkout hiện tại.
+This README intentionally does not copy size, checksum, or the word “PASS” from an older project. Handoff values must be obtained by running `verify`/`rom-info` on the current checkout itself.
 
-## Điều khiển
+## Controls
 
 ### COMP/CMPLX expression editor
 
-| Phím | Hành vi |
-|---|---|
-| D-pad | Di chuyển selection; đi vượt mép lưới sẽ đổi trang và giữ hàng/cột tương ứng |
-| A | Chèn token; nếu đang chọn `EXE` thì execute mode hiện tại |
-| B | Xóa ký tự ngay trước cursor |
-| L / R | Di chuyển cursor biểu thức sang trái / phải |
-| SELECT + UP / DOWN | Chuyển structural slot theo chiều dọc trong fraction, power, root hoặc calculus template |
-| B + LEFT / RIGHT | Chuyển trang keypad |
-| START | Shortcut tương đương chọn `EXE` rồi nhấn A |
-| SELECT + START | Mở/đóng mode menu |
+| Key                | Behavior                                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------------------- |
+| D-pad              | Move the selection; crossing a grid edge changes the page while preserving the corresponding row/column |
+| A                  | Insert a token; if `EXE` is selected, execute the current mode                                          |
+| B                  | Delete the character immediately before the cursor                                                      |
+| L / R              | Move the expression cursor left/right                                                                   |
+| SELECT + UP / DOWN | Move between structural slots vertically within fraction, power, root, or calculus templates            |
+| B + LEFT / RIGHT   | Change keypad page                                                                                      |
+| START              | Shortcut equivalent to selecting `EXE` and pressing A                                                   |
+| SELECT + START     | Open/close the mode menu                                                                                |
 
-Editor vẫn lưu biểu thức dạng text tuyến tính. Natural cursor nhận diện numerator, denominator, base, exponent, root index/radicand, body/variable/bounds và điểm đạo hàm. Vì vậy parser luôn nhận cùng một source string, còn UI có thể layout textbook mà không duy trì hai biểu diễn toán học khác nhau.
+The editor still stores expressions as linear text. The Natural cursor recognizes numerator, denominator, base, exponent, root index/radicand, body/variable/bounds, and derivative locations. The parser therefore always receives the same source string, while the UI can provide textbook-style layout without maintaining two different mathematical representations.
 
-Mọi keypad là lưới 6×5 với `EXE` cố định ở ô 29. Page được lọc theo mode thay vì dùng chung toàn bộ catalogue: COMP 7 page và CMPLX 8 page; các workspace khác có 2–5 page phù hợp với dữ liệu của chúng. D-pad vượt mép lưới đổi page tuần hoàn và giữ hàng/cột trên trục còn lại.
+Every keypad is a 6×5 grid with `EXE` fixed at cell 29. Pages are filtered by mode rather than sharing one global catalogue: COMP has 7 pages and CMPLX has 8 pages; the other workspaces have 2–5 pages appropriate to their data. Crossing a grid edge with the D-pad changes pages cyclically while preserving the row/column on the other axis.
 
-Toàn bộ chữ do app render—header, expression, kết quả, status, mode menu, table, keypad và GRAPH—dùng glyph printable ASCII 5×7. API 5×9 cũ chỉ còn được giữ để tương thích ở tầng đồ họa, không còn được gọi từ UI app.
+All text rendered by the application—headers, expressions, results, status, mode menu, table, keypad, and GRAPH—uses printable ASCII 5×7 glyphs. The old 5×9 API is retained only for compatibility at the graphics layer and is no longer called by the application UI.
 
 ### Mode menu
 
-| Phím | Hành vi |
-|---|---|
-| D-pad | Chọn một trong 12 mode trên lưới 3×4 |
-| A / START | Xác nhận mode |
-| B | Đóng menu, giữ mode trước đó |
-| SELECT + START | Đóng menu |
+| Key            | Behavior                                  |
+| -------------- | ----------------------------------------- |
+| D-pad          | Select one of 12 modes on a 3×4 grid      |
+| A / START      | Confirm the selected mode                 |
+| B              | Close the menu and keep the previous mode |
+| SELECT + START | Close the menu                            |
 
-Chọn mode 12 mở màn hình nhập biểu thức GRAPH riêng. Biểu thức GRAPH được giữ trong buffer riêng với COMP và vẫn còn nguyên khi chuyển qua lại giữa editor và viewport.
+Selecting mode 12 opens a dedicated GRAPH expression input screen. The GRAPH expression is kept in a separate buffer from COMP and remains intact when switching between the editor and viewport.
 
-### Workspace theo mode
+### Per-mode workspaces
 
-- STAT mở selector 8 loại, sau đó là bảng X/Freq cho 1-VAR hoặc X/Y/Freq cho regression. `SELECT+D-pad` đổi cell, `EXE` sang cell kế và `START` tính.
-- BASE-N có buffer riêng, bốn lựa chọn DEC/HEX/BIN/OCT, digit gating theo radix và hai page arithmetic/logic. `Neg` nhập bù hai 32-bit.
-- EQN và INEQ mở action selector rồi grid hệ số. MATRIX/VECTOR có bốn vùng nhớ `MatA..MatD`/`VctA..VctD`: chọn `EDIT` để mở bảng textbook với một cặp ngoặc vuông lớn, `SELECT+D-pad` đổi ô, `SELECT+L/R` đổi dimension, `SELECT+B` xóa và `B` hoặc `START` lưu rồi thoát. Các phép toán ma trận/vector mở form `f()` đã điền sẵn tên vùng nhớ.
-- TABLE, RATIO và DIST mở action selector rồi form. `SELECT+UP/DOWN` đổi field, `START` hoặc `EXE` tính; `B` trên field rỗng quay lại selector.
+* STAT opens an 8-type selector, followed by an X/Freq table for 1-VAR or an X/Y/Freq table for regression. `SELECT+D-pad` changes the cell, `EXE` advances to the next cell, and `START` calculates.
+* BASE-N has its own buffer, four choices—DEC/HEX/BIN/OCT—digit gating based on the radix, and two arithmetic/logic pages. `Neg` enters a 32-bit two's-complement value.
+* EQN and INEQ open an action selector followed by a coefficient grid. MATRIX/VECTOR have four memory areas, `MatA..MatD` / `VctA..VctD`: select `EDIT` to open a textbook-style table with one large pair of square brackets, `SELECT+D-pad` changes cells, `SELECT+L/R` changes dimensions, `SELECT+B` clears, and `B` or `START` saves and exits. Matrix/vector operations open a pre-filled `f()` form containing the selected memory-area name.
+* TABLE, RATIO, and DIST open an action selector followed by a form. `SELECT+UP/DOWN` changes fields, while `START` or `EXE` calculates. `B` on an empty field returns to the selector.
 
-Các workspace giữ buffer riêng với COMP và GRAPH. Form/grid phép toán serialize thành canonical command string ở biên mode engine; riêng STAT gửi mảng hàng trực tiếp và editor `Mat`/`Vct` tính từng ô rồi ghi thẳng vào vùng nhớ cố định để không phụ thuộc một command buffer lớn.
+Workspaces maintain separate buffers from COMP and GRAPH. Form/grid operations serialize into a canonical command string at the mode-engine boundary; STAT sends row arrays directly, while `Mat`/`Vct` editors calculate each cell and write directly into fixed memory areas, avoiding dependence on a large command buffer.
 
 ### GRAPH expression input
 
-| Phím | Hành vi |
-|---|---|
-| D-pad | Di chuyển selection; đi vượt mép lưới sẽ sang trang trước/sau và giữ hàng hoặc cột tương ứng |
-| A | Chèn token; nếu đang chọn ô `EXE` thì parse và vẽ biểu thức hiện tại |
-| B | Xóa ký tự ngay trước cursor |
-| L / R | Di chuyển cursor biểu thức sang trái / phải |
-| SELECT + UP / DOWN | Chuyển structural slot theo chiều dọc |
-| B + LEFT / RIGHT | Chuyển trang trực tiếp |
-| START | Shortcut tương đương chọn `EXE` rồi nhấn A |
-| SELECT + START | Mở mode menu |
+| Key                | Behavior                                                                                                               |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| D-pad              | Move the selection; crossing a grid edge moves to the previous/next page while preserving the corresponding row/column |
+| A                  | Insert a token; if `EXE` is selected, parse and plot the current expression                                            |
+| B                  | Delete the character immediately before the cursor                                                                     |
+| L / R              | Move the expression cursor left/right                                                                                  |
+| SELECT + UP / DOWN | Move between structural slots vertically                                                                               |
+| B + LEFT / RIGHT   | Change page directly                                                                                                   |
+| START              | Shortcut equivalent to selecting `EXE` and pressing A                                                                  |
+| SELECT + START     | Open the mode menu                                                                                                     |
 
-Keypad GRAPH có 4 trang `PLOT`, `FUNC`, `CALC`, `SYM`. Mỗi trang là lưới 6×5; ô dưới cùng bên phải (index 29) luôn là `EXE` và không bao giờ chèn chữ vào biểu thức. Toàn bộ ký tự ở GRAPH input, graph header và graph status dùng glyph 5×7.
+The GRAPH input keypad has four pages: `PLOT`, `FUNC`, `CALC`, and `SYM`. Each page is a 6×5 grid; the bottom-right cell (index 29) is always `EXE` and never inserts text into the expression. All characters in GRAPH input, the graph header, and graph status use 5×7 glyphs.
 
 ### Graph view
 
-| Phím | Hành vi |
-|---|---|
-| START | Parse lại function list và bắt đầu plot mới |
-| D-pad khi trace tắt | Pan viewport |
-| L / R | Zoom out / in |
-| A | Bật/tắt trace |
-| LEFT / RIGHT khi trace bật | Di chuyển trace theo sample |
-| UP / DOWN khi trace bật | Chuyển function đang trace |
-| B | Quay về GRAPH expression input và giữ nguyên biểu thức/cursor |
-| SELECT + START | Mở mode menu |
+| Key                           | Behavior                                                                |
+| ----------------------------- | ----------------------------------------------------------------------- |
+| START                         | Re-parse the function list and start a new plot                         |
+| D-pad when trace is off       | Pan the viewport                                                        |
+| L / R                         | Zoom out / in                                                           |
+| A                             | Toggle trace                                                            |
+| LEFT / RIGHT when trace is on | Move the trace between samples                                          |
+| UP / DOWN when trace is on    | Switch the function being traced                                        |
+| B                             | Return to GRAPH expression input while preserving the expression/cursor |
+| SELECT + START                | Open the mode menu                                                      |
 
-Viewport mặc định có tâm (0,0), `x=[-10,10]`; vùng plot 240×134 cho `y` xấp xỉ `[-5.58,5.58]`. Mỗi function dùng 240 sample và renderer lấy tối đa 32 sample mỗi frame, nên UI không đợi cả function list xong mới tiếp tục vòng lặp VBlank.
+The default viewport is centered at (0,0), with `x=[-10,10]`; the 240×134 plot area corresponds to approximately `y=[-5.58,5.58]`. Each function uses 240 samples, and the renderer processes at most 32 samples per frame, so the UI does not wait for the entire function list to finish before continuing through the VBlank loop.
 
 ### Table view
 
-| Phím | Hành vi |
-|---|---|
-| UP / DOWN | Scroll các row khi bảng dài hơn vùng hiển thị |
-| START | Tính lại bảng từ expression hiện tại |
-| B | Quay về TABLE form nếu bảng được tạo từ form; nếu không thì về expression editor |
-| SELECT + START | Mở mode menu |
+| Key            | Behavior                                                                                                 |
+| -------------- | -------------------------------------------------------------------------------------------------------- |
+| UP / DOWN      | Scroll through rows when the table is longer than the visible area                                       |
+| START          | Recalculate the table from the current expression                                                        |
+| B              | Return to the TABLE form if the table was created from a form; otherwise return to the expression editor |
+| SELECT + START | Open the mode menu                                                                                       |
 
-## Biểu thức
+## Expressions
 
-Grammar chính nhận:
+The main grammar accepts:
 
 ```text
 + - * / ^
@@ -175,7 +175,7 @@ Grammar chính nhận:
 1.25  1,25  1E100  1E-100
 ```
 
-Ví dụ:
+Examples:
 
 ```text
 2A+3(4+1)
@@ -188,11 +188,11 @@ d/dx(x^2;x;3)
 d2/dx2(x^2;x;3)
 ```
 
-Dùng `;` để phân cách đối số nhiều ngôi. Dấu phẩy còn có vai trò dấu thập phân, nên `;` rõ nghĩa hơn trong input thủ công.
+Use `;` to separate multiple arguments. A comma is also accepted as a decimal separator, so `;` is unambiguous for manually entered multi-argument expressions.
 
-Kết quả evaluator public dùng `CalcNumber`: chín chữ số có nghĩa, exponent thập phân -100..100. `DecimalNumber` 32 chữ số là module riêng và chưa thay thế evaluator tổng quát. Context mặc định là RAD; core API có DEG/GRAD nhưng UI baseline chưa gán phím đổi angle mode.
+The public evaluator uses `CalcNumber`: nine significant digits with a decimal exponent range of -100..100. `DecimalNumber`, with 32-digit precision, is a separate module and does not yet replace the general-purpose evaluator. The default context is RAD; the core API supports DEG/GRAD, but the baseline UI does not assign a key for changing the angle mode.
 
-## Mười hai mode
+## Twelve modes
 
 Mode menu:
 
@@ -202,82 +202,80 @@ Mode menu:
 9: INEQ     10: RATIO    11: DIST      12: GRAPHING
 ```
 
-Engine nhận compact command syntax; UI cung cấp editor riêng theo mode và serialize về cú pháp này:
+The engine accepts compact command syntax; the UI provides per-mode editors and serializes them into this syntax:
 
-| Mode | Ví dụ contract |
-|---|---|
-| COMP | `sum(x^2;x;1;3)`, `ncr(10;3)`, `normalpdf(0;0;1)` |
-| CMPLX | `3+4i`, `conj:3+4i`, `pow:1+i;2`, `polar:2;pi/4` |
-| STAT | `1;2;3;4`, `170,66;173,68;179,75`, `freq:1,2,3;2,1,1` |
-| BASE-N | `bin(1011)`, `hex(FF)`, `101+1`, `xnor(15;7)`, `neg(1)` |
-| EQN | `solve:x^2=2;1`, `solven:x^2=1;-2;2`, `lin:1,1,3;2,-1,0`, `poly:1;-3;2` |
-| MATRIX | `det(MatA)`, `inv(MatA)`, `transpose(MatA)`, `mul(MatA;MatB)` |
-| TABLE | `x^2;0;5;1`, `x;x^2;0;5;1`, `dtable:x^2;0;5;1` |
-| VECTOR | `norm(VctA)`, `dot(VctA;VctB)`, `cross(VctA;VctB)`, `scale(2;VctA)` |
-| INEQ | `2*x<4`, `ineq2(1;0;-4;<)`, `ineq3(1;0;0;0;<)`, `ineq4(1;0;0;0;-1;<)` |
-| RATIO | `1.5:2.5`, `2:3=8:?` |
-| DIST | `binomcdf(5;10;0.5)`, `normcdf(-1;1;1;0)`, `norminv(0.5;1;0)` |
-| GRAPHING | `x^2;sin(x)`, `param(cos(t);sin(t))`, `x>=y^2` |
+| Mode     | Example contract                                                        |
+| -------- | ----------------------------------------------------------------------- |
+| COMP     | `sum(x^2;x;1;3)`, `ncr(10;3)`, `normalpdf(0;0;1)`                       |
+| CMPLX    | `3+4i`, `conj:3+4i`, `pow:1+i;2`, `polar:2;pi/4`                        |
+| STAT     | `1;2;3;4`, `170,66;173,68;179,75`, `freq:1,2,3;2,1,1`                   |
+| BASE-N   | `bin(1011)`, `hex(FF)`, `101+1`, `xnor(15;7)`, `neg(1)`                 |
+| EQN      | `solve:x^2=2;1`, `solven:x^2=1;-2;2`, `lin:1,1,3;2,-1,0`, `poly:1;-3;2` |
+| MATRIX   | `det(MatA)`, `inv(MatA)`, `transpose(MatA)`, `mul(MatA;MatB)`           |
+| TABLE    | `x^2;0;5;1`, `x;x^2;0;5;1`, `dtable:x^2;0;5;1`                          |
+| VECTOR   | `norm(VctA)`, `dot(VctA;VctB)`, `cross(VctA;VctB)`, `scale(2;VctA)`     |
+| INEQ     | `2*x<4`, `ineq2(1;0;-4;<)`, `ineq3(1;0;0;0;<)`, `ineq4(1;0;0;0;-1;<)`   |
+| RATIO    | `1.5:2.5`, `2:3=8:?`                                                    |
+| DIST     | `binomcdf(5;10;0.5)`, `normcdf(-1;1;1;0)`, `norminv(0.5;1;0)`           |
+| GRAPHING | `x^2;sin(x)`, `param(cos(t);sin(t))`, `x>=y^2`                          |
 
-Danh sách alias, giới hạn shape/range và thứ tự đối số chuẩn nằm trong [docs/reference_matrix.md](docs/reference_matrix.md).
+The list of aliases, shape/range limits, and canonical argument ordering is documented in [docs/reference_matrix.md](https://github.com/thavh8971/gba_graphing_calculator/blob/main/docs/reference_matrix.md).
 
 ## Graph pipeline
 
-Function list nhận tối đa 10 row:
+The function list accepts up to 10 rows:
 
 ```text
-y=f(x)                 hoặc f(x)
+y=f(x)                 or f(x)
 x=f(y)
 r=f(t)
-param(x(t);y(t))       (`param:x(t);y(t)` là compatibility alias)
+param(x(t);y(t))       (`param:x(t);y(t)` is a compatibility alias)
 y<f(x), y<=f(x), y>f(x), y>=f(x)
 x<f(y), x<=f(y), x>f(y), x>=f(y)
 ```
 
-Sampler phát `GraphSample` theo chunk, kèm fixed-point coordinates, parameter, trạng thái domain/pole/overflow và `breakBefore`. Renderer clip segment ở world coordinates trước khi rasterize. Với `tan(g(x))`, phase crossing tại π/2 + kπ được theo dõi riêng để tránh nối qua pole thường gặp.
+The sampler emits `GraphSample` values in chunks, including fixed-point coordinates, parameter values, domain/pole/overflow state, and `breakBefore`. The renderer clips segments in world coordinates before rasterization. For `tan(g(x))`, phase crossings at `π/2 + kπ` are tracked separately to avoid the common mistake of connecting across poles.
 
-Đây vẫn là sampling hữu hạn. Discontinuity tùy ý được xử lý bằng state/detector/heuristic, không phải symbolic singularity analysis; một tiệm cận hoặc chi tiết rất hẹp vẫn có thể bị nối nhầm hoặc bỏ sót.
+This remains finite-resolution sampling. Arbitrary discontinuities are handled through state, detectors, and heuristics rather than symbolic singularity analysis; an asymptote or very narrow feature may still be incorrectly connected or missed.
 
-## RAM và framebuffer
+## RAM and framebuffer
 
-- framebuffer Mode 3 chiếm 76.800 byte VRAM;
-- không có shadow framebuffer đầy màn hình trong EWRAM;
-- `AppState`, parse cache và fallback AST tĩnh được đặt trong EWRAM;
-- graph stream tối đa 32 sample mỗi frame, không giữ toàn bộ plot;
-- expression, AST, table, function list và result đều có capacity cố định;
-- source của dự án không gọi trực tiếp `malloc`/`free`; tuy nhiên artifact ARM hiện liên kết `snprintf`/`strtold` của newlib và kéo theo allocator/heap support, nên đây không phải hard no-heap build.
+* The Mode 3 framebuffer occupies 76,800 bytes of VRAM;
+* there is no full-screen shadow framebuffer in EWRAM;
+* `AppState`, parse cache, and fallback AST storage are placed in EWRAM;
+* the graph stream processes at most 32 samples per frame and does not retain the entire plot;
+* expressions, ASTs, tables, function lists, and results all use fixed capacities;
+* the project source does not directly call `malloc`/`free`; however, the ARM artifact currently links `snprintf`/`strtold` from newlib and consequently pulls in allocator/heap support, so this is not a hard no-heap build.
 
-Một số workspace graph/mode/decimal là biến cục bộ tương đối lớn. `verify-gba-memory` bắt cache sai section, ARM fast-fill sai vùng/state và stack margin dưới 18 KiB; host tests vẫn không bắt được lỗi timing/VRAM hay hình ảnh thực trên GBA.
+Some graph/mode/decimal workspaces use relatively large local variables. `verify-gba-memory` catches incorrect cache sections, ARM fast-fill targeting the wrong region/state, and stack margins below 18 KiB; host tests cannot detect timing/VRAM issues or visual correctness on actual GBA hardware.
 
 ## Verification boundary
 
-Các suite host hiện có nhằm kiểm tra:
+The current host test suites cover:
 
-- parser/evaluator, context isolation và AST cache khi lặp/mutate input;
-- decimal arithmetic và Natural cursor;
-- route/page/keypad của từng workspace, form/grid, STAT, BASE-N và GRAPH EXE/B;
-- mode runtime/alias, graph row classification, streaming, clipping và framebuffer stride/guard.
+* parser/evaluator, context isolation, and AST cache behavior under repeated/mutated input;
+* decimal arithmetic and Natural cursor behavior;
+* routing/page/keypad behavior for each workspace, forms/grids, STAT, BASE-N, and GRAPH EXE/B behavior;
+* mode runtime/aliases, graph row classification, streaming, clipping, and framebuffer stride/guard behavior.
 
-`verify-rom-header` còn đọc lại title/game code/maker/version trong ROM sau `gbafix`. Không bước nào ở trên chứng minh hình ảnh hoặc input trên emulator/phần cứng. Baseline tài liệu này chưa có visual emulator verification và quá trình phát triển không dùng Computer Use/emulator.
+`verify-rom-header` also reads back the title/game code/maker/version from the ROM after `gbafix`. None of these steps proves the actual rendered image or physical input behavior on an emulator or real hardware. This documentation baseline does not include visual emulator verification, and the development process did not use Computer Use/emulator interaction.
 
-## Giới hạn hiện tại
+## Current limitations
 
-- chưa phải clone đầy đủ fx-9750GII/GIII, fx-570VN PLUS hay model Casio khác;
-- không có catalogue 453 function/command;
-- `DecimalNumber` chưa là backend chung;
-- DEG/GRAD có trong core context nhưng chưa có control đổi angle mode trên UI baseline;
-- integral, derivative, equation solve và table derivative là phép tính số;
-- graph discontinuity và trace là heuristic hữu hạn độ phân giải; midpoint bridge hiện sâu 2 mức;
-- nghiệm đa thức thực rất gần nhau (xấp xỉ `1e-5 * (1 + |x|)`) có thể bị gộp như một nghiệm lặp;
-- output tỷ số nguyên bị giới hạn bởi miền signed 64-bit;
-- form phép toán vẫn serialize về command string hữu hạn; đã có `MatA..MatD`/`VctA..VctD`, nhưng chưa có persistent named list hoặc spreadsheet;
-- chưa có spreadsheet, eActivity, program editor, conics, dynamic graph, CAS hoặc Graph Solve đầy đủ;
-- chưa có emulator/hardware visual verification trong baseline này.
+* not a complete clone of fx-9750GII/GIII, fx-570VN PLUS, or any other Casio model;
+* `DecimalNumber` is not yet the common backend;
+* DEG/GRAD exist in the core context but the baseline UI has no control for changing the angle mode;
+* integral, derivative, equation solving, and table derivative operations are numerical approximations;
+* graph discontinuity handling and trace are finite-resolution heuristics; midpoint bridging currently goes two levels deep;
+* very closely spaced real polynomial roots (approximately `1e-5 * (1 + |x|)`) may be merged as repeated roots;
+* integer ratio output is limited by the signed 64-bit range;
+* operation forms still serialize into finite command strings; `MatA..MatD` / `VctA..VctD` exist, but there are no persistent named lists or spreadsheet functionality;
+* no spreadsheet, eActivity, program editor, conics, dynamic graphing, CAS, or full Graph Solve functionality;
+* some functions with extreme conditions like tan(), csc() will get this calculator fuck up.
+## Reference documentation
 
-## Tài liệu tham chiếu
+* [Casio Natural textbook input](https://support.casio.com/global/en/calc/manual/fx-97SGCW_en/inputting_expressions_and_values/inputting_an_expression_using_natural_textbook_format.html)
+* [fx-9750GIII Software User’s Guide v3.21](https://support.casio.com/storage/en/manual/pdf/EN/004/fx-9750GIII_Soft_v321_EN.pdf)
+* [Casio Graph&Table App](https://support.casio.com/global/en/calc/manual/fx-CG100_1AUGRAPHv210_en/JEAWSYadjpqxtp.html)
 
-- [Casio Natural textbook input](https://support.casio.com/global/en/calc/manual/fx-97SGCW_en/inputting_expressions_and_values/inputting_an_expression_using_natural_textbook_format.html)
-- [fx-9750GIII Software User’s Guide v3.21](https://support.casio.com/storage/en/manual/pdf/EN/004/fx-9750GIII_Soft_v321_EN.pdf)
-- [Casio Graph&Table App](https://support.casio.com/global/en/calc/manual/fx-CG100_1AUGRAPHv210_en/JEAWSYadjpqxtp.html)
-
-Các link chỉ dùng làm behavioral reference; contract của repository luôn là source + tests trong checkout hiện tại.
+These links are used only as behavioral references; the repository’s contract is always the source code and tests in the current checkout.
